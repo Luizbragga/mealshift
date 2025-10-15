@@ -1,0 +1,283 @@
+[
+  {
+    "name": "Arroz branco cozido",
+    "basePortion": "100 g",
+    "kcalPerPortion": 130
+  },
+  {
+    "name": "Arroz integral cozido",
+    "basePortion": "100 g",
+    "kcalPerPortion": 112
+  },
+  {
+    "name": "Feijão preto cozido",
+    "basePortion": "100 g",
+    "kcalPerPortion": 77
+  },
+  {
+    "name": "Feijão carioca cozido",
+    "basePortion": "100 g",
+    "kcalPerPortion": 76
+  },
+  { "name": "Frango grelhado", "basePortion": "100 g", "kcalPerPortion": 165 },
+  {
+    "name": "Peito de frango cozido",
+    "basePortion": "100 g",
+    "kcalPerPortion": 195
+  },
+  {
+    "name": "Carne bovina grelhada",
+    "basePortion": "100 g",
+    "kcalPerPortion": 250
+  },
+  {
+    "name": "Carne moída refogada",
+    "basePortion": "100 g",
+    "kcalPerPortion": 215
+  },
+  { "name": "Peixe grelhado", "basePortion": "100 g", "kcalPerPortion": 140 },
+  { "name": "Salmão grelhado", "basePortion": "100 g", "kcalPerPortion": 208 },
+  { "name": "Ovo cozido", "basePortion": "1 uni", "kcalPerPortion": 78 },
+  { "name": "Ovos mexidos", "basePortion": "2 uni", "kcalPerPortion": 180 },
+  { "name": "Omelete simples", "basePortion": "2 ovos", "kcalPerPortion": 154 },
+  { "name": "Batata cozida", "basePortion": "100 g", "kcalPerPortion": 87 },
+  { "name": "Batata frita", "basePortion": "100 g", "kcalPerPortion": 312 },
+  {
+    "name": "Batata doce cozida",
+    "basePortion": "100 g",
+    "kcalPerPortion": 86
+  },
+  { "name": "Mandioca cozida", "basePortion": "100 g", "kcalPerPortion": 125 },
+  { "name": "Macarrão cozido", "basePortion": "100 g", "kcalPerPortion": 131 },
+  {
+    "name": "Macarrão integral",
+    "basePortion": "100 g",
+    "kcalPerPortion": 124
+  },
+  {
+    "name": "Pão francês",
+    "basePortion": "1 uni (50g)",
+    "kcalPerPortion": 135
+  },
+  { "name": "Pão integral", "basePortion": "2 fatias", "kcalPerPortion": 138 },
+  {
+    "name": "Pão de forma branco",
+    "basePortion": "2 fatias",
+    "kcalPerPortion": 132
+  },
+  { "name": "Tapioca", "basePortion": "1 uni", "kcalPerPortion": 147 },
+  { "name": "Cuscuz de milho", "basePortion": "100 g", "kcalPerPortion": 112 },
+  { "name": "Aveia em flocos", "basePortion": "40 g", "kcalPerPortion": 150 },
+  { "name": "Granola", "basePortion": "40 g", "kcalPerPortion": 181 },
+  { "name": "Queijo minas", "basePortion": "30 g", "kcalPerPortion": 84 },
+  { "name": "Queijo mussarela", "basePortion": "30 g", "kcalPerPortion": 90 },
+  { "name": "Requeijão", "basePortion": "30 g", "kcalPerPortion": 84 },
+  { "name": "Presunto", "basePortion": "2 fatias", "kcalPerPortion": 72 },
+  { "name": "Peito de peru", "basePortion": "2 fatias", "kcalPerPortion": 46 },
+  { "name": "Manteiga", "basePortion": "10 g", "kcalPerPortion": 72 },
+  { "name": "Margarina", "basePortion": "10 g", "kcalPerPortion": 72 },
+  { "name": "Azeite", "basePortion": "1 colher sopa", "kcalPerPortion": 119 },
+  {
+    "name": "Óleo de cozinha",
+    "basePortion": "1 colher sopa",
+    "kcalPerPortion": 120
+  },
+  { "name": "Leite integral", "basePortion": "200 ml", "kcalPerPortion": 120 },
+  { "name": "Leite desnatado", "basePortion": "200 ml", "kcalPerPortion": 70 },
+  { "name": "Iogurte natural", "basePortion": "170 g", "kcalPerPortion": 100 },
+  { "name": "Iogurte grego", "basePortion": "170 g", "kcalPerPortion": 133 },
+  { "name": "Banana", "basePortion": "1 uni média", "kcalPerPortion": 105 },
+  { "name": "Maçã", "basePortion": "1 uni média", "kcalPerPortion": 95 },
+  { "name": "Laranja", "basePortion": "1 uni média", "kcalPerPortion": 62 },
+  { "name": "Mamão papaia", "basePortion": "1 fatia", "kcalPerPortion": 55 },
+  { "name": "Melancia", "basePortion": "1 fatia", "kcalPerPortion": 46 },
+  { "name": "Melão", "basePortion": "1 fatia", "kcalPerPortion": 34 },
+  { "name": "Abacaxi", "basePortion": "1 fatia", "kcalPerPortion": 50 },
+  { "name": "Manga", "basePortion": "1 uni média", "kcalPerPortion": 135 },
+  { "name": "Morango", "basePortion": "100 g", "kcalPerPortion": 32 },
+  { "name": "Uva", "basePortion": "100 g", "kcalPerPortion": 69 },
+  { "name": "Pera", "basePortion": "1 uni média", "kcalPerPortion": 101 },
+  { "name": "Kiwi", "basePortion": "1 uni", "kcalPerPortion": 42 },
+  { "name": "Alface", "basePortion": "100 g", "kcalPerPortion": 15 },
+  { "name": "Tomate", "basePortion": "100 g", "kcalPerPortion": 18 },
+  { "name": "Cenoura crua", "basePortion": "100 g", "kcalPerPortion": 41 },
+  { "name": "Pepino", "basePortion": "100 g", "kcalPerPortion": 15 },
+  { "name": "Brócolis cozido", "basePortion": "100 g", "kcalPerPortion": 35 },
+  { "name": "Couve refogada", "basePortion": "100 g", "kcalPerPortion": 49 },
+  { "name": "Espinafre cozido", "basePortion": "100 g", "kcalPerPortion": 23 },
+  { "name": "Abobrinha cozida", "basePortion": "100 g", "kcalPerPortion": 17 },
+  { "name": "Berinjela cozida", "basePortion": "100 g", "kcalPerPortion": 35 },
+  { "name": "Chuchu cozido", "basePortion": "100 g", "kcalPerPortion": 19 },
+  {
+    "name": "Grão-de-bico cozido",
+    "basePortion": "100 g",
+    "kcalPerPortion": 164
+  },
+  { "name": "Lentilha cozida", "basePortion": "100 g", "kcalPerPortion": 116 },
+  { "name": "Ervilha cozida", "basePortion": "100 g", "kcalPerPortion": 81 },
+  { "name": "Milho cozido", "basePortion": "1 espiga", "kcalPerPortion": 123 },
+  { "name": "Amendoim torrado", "basePortion": "30 g", "kcalPerPortion": 170 },
+  { "name": "Castanha de caju", "basePortion": "30 g", "kcalPerPortion": 165 },
+  { "name": "Amêndoas", "basePortion": "30 g", "kcalPerPortion": 173 },
+  { "name": "Nozes", "basePortion": "30 g", "kcalPerPortion": 196 },
+  {
+    "name": "Biscoito cream cracker",
+    "basePortion": "5 uni",
+    "kcalPerPortion": 110
+  },
+  {
+    "name": "Biscoito recheado",
+    "basePortion": "3 uni",
+    "kcalPerPortion": 162
+  },
+  { "name": "Bolo simples", "basePortion": "1 fatia", "kcalPerPortion": 187 },
+  {
+    "name": "Chocolate ao leite",
+    "basePortion": "30 g",
+    "kcalPerPortion": 159
+  },
+  {
+    "name": "Chocolate amargo 70%",
+    "basePortion": "30 g",
+    "kcalPerPortion": 170
+  },
+  { "name": "Sorvete", "basePortion": "1 bola", "kcalPerPortion": 137 },
+  {
+    "name": "Açaí com granola",
+    "basePortion": "300 ml",
+    "kcalPerPortion": 340
+  },
+  {
+    "name": "Hambúrguer simples",
+    "basePortion": "1 uni",
+    "kcalPerPortion": 295
+  },
+  {
+    "name": "Pizza de mussarela",
+    "basePortion": "1 fatia",
+    "kcalPerPortion": 272
+  },
+  { "name": "Pastel frito", "basePortion": "1 uni", "kcalPerPortion": 215 },
+  { "name": "Coxinha", "basePortion": "1 uni", "kcalPerPortion": 280 },
+  { "name": "Empada", "basePortion": "1 uni", "kcalPerPortion": 180 },
+  {
+    "name": "Sanduíche natural",
+    "basePortion": "1 uni",
+    "kcalPerPortion": 250
+  },
+  {
+    "name": "Suco de laranja natural",
+    "basePortion": "200 ml",
+    "kcalPerPortion": 90
+  },
+  { "name": "Suco de limão", "basePortion": "200 ml", "kcalPerPortion": 48 },
+  {
+    "name": "Breakfast com açúcar",
+    "basePortion": "1 xícara",
+    "kcalPerPortion": 20
+  },
+  { "name": "Breakfast preto", "basePortion": "1 xícara", "kcalPerPortion": 2 },
+  { "name": "Chá sem açúcar", "basePortion": "1 xícara", "kcalPerPortion": 2 },
+  { "name": "Refrigerante", "basePortion": "350 ml", "kcalPerPortion": 147 },
+  { "name": "Refrigerante zero", "basePortion": "350 ml", "kcalPerPortion": 0 },
+  { "name": "Cerveja", "basePortion": "350 ml", "kcalPerPortion": 147 },
+  { "name": "Vinho tinto", "basePortion": "150 ml", "kcalPerPortion": 125 },
+  { "name": "Caipirinha", "basePortion": "1 dose", "kcalPerPortion": 270 },
+  {
+    "name": "Sopa de legumes",
+    "basePortion": "1 concha",
+    "kcalPerPortion": 85
+  },
+  {
+    "name": "Caldo de feijão",
+    "basePortion": "1 concha",
+    "kcalPerPortion": 112
+  },
+  { "name": "Salada verde", "basePortion": "1 prato", "kcalPerPortion": 45 },
+  {
+    "name": "Salada de maionese",
+    "basePortion": "100 g",
+    "kcalPerPortion": 143
+  },
+  { "name": "Vinagrete", "basePortion": "50 g", "kcalPerPortion": 25 },
+  { "name": "Farofa", "basePortion": "50 g", "kcalPerPortion": 175 },
+  { "name": "Purê de batata", "basePortion": "100 g", "kcalPerPortion": 105 },
+  { "name": "Polenta", "basePortion": "100 g", "kcalPerPortion": 85 },
+  { "name": "Paçoca", "basePortion": "1 uni", "kcalPerPortion": 107 },
+  { "name": "Pé-de-moleque", "basePortion": "1 uni", "kcalPerPortion": 145 },
+  { "name": "Brigadeiro", "basePortion": "1 uni", "kcalPerPortion": 90 },
+  { "name": "Beijinho", "basePortion": "1 uni", "kcalPerPortion": 88 },
+  { "name": "Quindim", "basePortion": "1 uni", "kcalPerPortion": 120 },
+  { "name": "Pudim", "basePortion": "1 fatia", "kcalPerPortion": 195 },
+  { "name": "Torta de limão", "basePortion": "1 fatia", "kcalPerPortion": 268 },
+  {
+    "name": "Mousse de chocolate",
+    "basePortion": "100 g",
+    "kcalPerPortion": 210
+  },
+  { "name": "Gelatina", "basePortion": "100 g", "kcalPerPortion": 62 },
+  { "name": "Pipoca natural", "basePortion": "50 g", "kcalPerPortion": 193 },
+  {
+    "name": "Pipoca com manteiga",
+    "basePortion": "50 g",
+    "kcalPerPortion": 245
+  },
+  { "name": "Barra de cereal", "basePortion": "1 uni", "kcalPerPortion": 117 },
+  { "name": "Proteína whey", "basePortion": "30 g", "kcalPerPortion": 120 },
+  { "name": "Mel", "basePortion": "1 colher sopa", "kcalPerPortion": 64 },
+  { "name": "Geleia", "basePortion": "1 colher sopa", "kcalPerPortion": 56 },
+  {
+    "name": "Pasta de amendoim",
+    "basePortion": "1 colher sopa",
+    "kcalPerPortion": 96
+  },
+  { "name": "Cream cheese", "basePortion": "30 g", "kcalPerPortion": 99 },
+  { "name": "Ricota", "basePortion": "50 g", "kcalPerPortion": 87 },
+  { "name": "Cottage", "basePortion": "100 g", "kcalPerPortion": 98 },
+  { "name": "Panqueca simples", "basePortion": "1 uni", "kcalPerPortion": 175 },
+  { "name": "Waffle", "basePortion": "1 uni", "kcalPerPortion": 218 },
+  { "name": "Croissant", "basePortion": "1 uni", "kcalPerPortion": 231 },
+  { "name": "Pão de queijo", "basePortion": "1 uni", "kcalPerPortion": 167 },
+  { "name": "Esfiha de carne", "basePortion": "1 uni", "kcalPerPortion": 235 },
+  { "name": "Quibe assado", "basePortion": "1 uni", "kcalPerPortion": 180 },
+  { "name": "Risoto", "basePortion": "150 g", "kcalPerPortion": 225 },
+  { "name": "Lasanha", "basePortion": "1 porção", "kcalPerPortion": 315 },
+  {
+    "name": "Strogonoff de frango",
+    "basePortion": "150 g",
+    "kcalPerPortion": 245
+  },
+  { "name": "Feijoada", "basePortion": "1 concha", "kcalPerPortion": 380 },
+  {
+    "name": "Moqueca de peixe",
+    "basePortion": "1 porção",
+    "kcalPerPortion": 290
+  },
+  {
+    "name": "Bacalhau ao forno",
+    "basePortion": "150 g",
+    "kcalPerPortion": 210
+  },
+  { "name": "Escondidinho", "basePortion": "1 porção", "kcalPerPortion": 340 },
+  { "name": "Frango xadrez", "basePortion": "150 g", "kcalPerPortion": 198 },
+  { "name": "Carne de panela", "basePortion": "100 g", "kcalPerPortion": 275 },
+  { "name": "Bife à milanesa", "basePortion": "1 uni", "kcalPerPortion": 310 },
+  {
+    "name": "Filé de peixe empanado",
+    "basePortion": "100 g",
+    "kcalPerPortion": 230
+  },
+  { "name": "Camarão grelhado", "basePortion": "100 g", "kcalPerPortion": 99 },
+  { "name": "Atum em conserva", "basePortion": "100 g", "kcalPerPortion": 116 },
+  { "name": "Sardinha em lata", "basePortion": "100 g", "kcalPerPortion": 208 },
+  { "name": "Salmão defumado", "basePortion": "50 g", "kcalPerPortion": 83 },
+  { "name": "Salame", "basePortion": "30 g", "kcalPerPortion": 113 },
+  { "name": "Mortadela", "basePortion": "30 g", "kcalPerPortion": 85 },
+  {
+    "name": "Linguiça calabresa",
+    "basePortion": "50 g",
+    "kcalPerPortion": 139
+  },
+  { "name": "Bacon", "basePortion": "2 fatias", "kcalPerPortion": 84 },
+  { "name": "Torresmo", "basePortion": "30 g", "kcalPerPortion": 180 }
+]
