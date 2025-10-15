@@ -1,70 +1,96 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { db, Plan, Entry } from "@/data/db";
+import { db, type Plan, type Entry } from "@/data/db";
 import { BottomNav } from "@/components/BottomNav";
 import { AdicionarAlimento } from "@/components/AdicionarAlimento";
 import { ComiForaReajuste } from "@/components/ComiForaReajuste";
 import { Plus, AlertCircle } from "lucide-react";
 import { hapticMedium } from "@/lib/haptics";
+import { getMealSlots, type MealSlot } from "@/data/db";
 
+/**
+ * I keep using the legacy Meal union for now because Entries and Plan fields
+ * still rely on these four well-known buckets. The UI reads "slots" dynamically,
+ * but I bridge slot.key → legacy Meal/Plan fields below.
+ */
 type Meal = "Breakfast" | "Lunch" | "Snack" | "Dinner";
 
 export default function Home() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [slots, setSlots] = useState<MealSlot[]>([]); // dynamic UI source
   const [showAddFood, setShowAddFood] = useState(false);
   const [showAteOut, setShowAteOut] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal>("Breakfast");
 
+  // I keep "today" as ISO once to avoid re-renders during the day.
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
 
+  // Bridge maps (slot.key → legacy names)
+  const supportedSlotKeys = ["breakfast", "lunch", "snack", "dinner"] as const;
+  type SupportedKey = (typeof supportedSlotKeys)[number];
+
+  const slotKeyToPlanField: Record<SupportedKey, keyof Plan> = {
+    breakfast: "breakfastKcal",
+    lunch: "lunchKcal",
+    snack: "snackKcal",
+    dinner: "dinnerKcal",
+  };
+
+  const slotKeyToMealLabel: Record<SupportedKey, Meal> = {
+    breakfast: "Breakfast",
+    lunch: "Lunch",
+    snack: "Snack",
+    dinner: "Dinner",
+  };
+
   const loadData = useCallback(async () => {
+    // Load plan for today
     const todayPlan = await db.plans.where("dayIso").equals(todayISO).first();
     setPlan(todayPlan ?? null);
 
+    // Load entries for today
     const todayEntries = await db.entries
       .where("dayIso")
       .equals(todayISO)
       .toArray();
     setEntries(todayEntries);
+
+    // Load configured meal slots from Settings; show only the legacy-supported ones for now
+    const s = await getMealSlots();
+    const filtered = s.filter((sl) =>
+      supportedSlotKeys.includes(sl.key as SupportedKey)
+    );
+    setSlots(filtered);
   }, [todayISO]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
+  /** I compute consumed kcal by "legacy meal label" (bridge for Entry.meal). */
   const getConsumedByMeal = useCallback(
-    (meal: Meal) => {
-      // DB keeps PT values; map UI -> DB
-      const ptKeyMap: Record<Meal, Entry["meal"]> = {
-        Breakfast: "Breakfast",
-        Lunch: "Lunch",
-        Snack: "Snack",
-        Dinner: "Dinner",
-      };
-      const key = ptKeyMap[meal];
-      return entries
-        .filter((e) => e.meal === key)
-        .reduce((sum, e) => sum + e.kcal, 0);
-    },
+    (meal: Meal) =>
+      entries
+        .filter((e) => e.meal === meal)
+        .reduce((sum, e) => sum + e.kcal, 0),
     [entries]
   );
 
+  /** Totals for the header card (goal vs consumed vs remaining). */
   const { totalGoal, totalConsumed, remaining } = useMemo(() => {
-    const totalGoal = plan
+    const goal = plan
       ? plan.breakfastKcal + plan.lunchKcal + plan.snackKcal + plan.dinnerKcal
       : 0;
-    const totalConsumed = entries.reduce((sum, e) => sum + e.kcal, 0);
-    return { totalGoal, totalConsumed, remaining: totalGoal - totalConsumed };
+    const consumed = entries.reduce((sum, e) => sum + e.kcal, 0);
+    return {
+      totalGoal: goal,
+      totalConsumed: consumed,
+      remaining: goal - consumed,
+    };
   }, [plan, entries]);
 
-  const meals: { label: Meal; metaKey: keyof Plan }[] = [
-    { label: "Breakfast", metaKey: "breakfastKcal" },
-    { label: "Lunch", metaKey: "lunchKcal" },
-    { label: "Snack", metaKey: "snackKcal" },
-    { label: "Dinner", metaKey: "dinnerKcal" },
-  ];
-
+  /** Handlers */
   const openAddFood = async (meal: Meal) => {
     await hapticMedium();
     setSelectedMeal(meal);
@@ -76,6 +102,7 @@ export default function Home() {
     setShowAteOut(true);
   };
 
+  /** Empty state (no plan created yet) */
   if (!plan) {
     return (
       <div className="min-h-screen bg-background p-6 flex items-center justify-center safe-top pb-24">
@@ -93,6 +120,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background safe-top pb-24">
       <div className="p-6">
+        {/* Header: summary of the day */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-4">Today</h1>
           <div
@@ -116,6 +144,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Primary actions */}
         <div className="flex gap-3 mb-6">
           <Button
             onClick={() => openAddFood("Breakfast")}
@@ -132,8 +161,13 @@ export default function Home() {
           </Button>
         </div>
 
+        {/* Dynamic list of slots (mapped to legacy Plan fields) */}
         <div className="space-y-3">
-          {meals.map(({ label, metaKey }) => {
+          {slots.map((slot) => {
+            const key = slot.key as SupportedKey;
+            const metaKey = slotKeyToPlanField[key];
+            const label = slotKeyToMealLabel[key];
+
             const meta = plan[metaKey] as number;
             const consumed = getConsumedByMeal(label);
             const percentage =
@@ -141,12 +175,12 @@ export default function Home() {
 
             return (
               <button
-                key={label}
+                key={slot.key}
                 onClick={() => openAddFood(label)}
                 className="w-full bg-card rounded-lg p-4 text-left border border-border hover:border-primary transition-colors"
               >
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold">{label}</span>
+                  <span className="font-semibold">{slot.label}</span>
                   <span className="text-sm text-muted-foreground">
                     {consumed} / {meta} kcal
                   </span>
@@ -165,6 +199,7 @@ export default function Home() {
         </div>
       </div>
 
+      {/* FAB to add quickly (defaults to Breakfast for now) */}
       <button
         onClick={() => openAddFood("Breakfast")}
         className="fixed bottom-20 right-6 w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg z-40"
@@ -173,11 +208,12 @@ export default function Home() {
         <Plus size={24} className="text-white" />
       </button>
 
+      {/* Modals */}
       <AdicionarAlimento
         open={showAddFood}
         onClose={() => setShowAddFood(false)}
         onSuccess={loadData}
-        defaultmeal={"Breakfast"} // component expects PT key; mapped from UI
+        defaultmeal={selectedMeal}
       />
 
       <ComiForaReajuste
@@ -185,7 +221,7 @@ export default function Home() {
         onClose={() => setShowAteOut(false)}
         onSuccess={loadData}
         currentPlan={plan}
-        totalConsumed={totalConsumed}
+        totalConsumed={entries.reduce((sum, e) => sum + e.kcal, 0)}
       />
 
       <BottomNav />
