@@ -9,13 +9,25 @@ interface AppState {
   setCurrentUserId: (id: number | null) => void;
   setIsPro: (value: boolean) => void;
 }
-// antes: name: "reajusta-app"
-const STORAGE_KEY_NEW = "mealshift-app";
+
 const STORAGE_KEY_OLD = "reajusta-app";
+const STORAGE_KEY_NEW = "mealshift-app";
+
+// migração de chave localStorage (one-shot)
+(function migrateStoreKey() {
+  try {
+    if (localStorage.getItem(STORAGE_KEY_NEW)) return;
+    const old = localStorage.getItem(STORAGE_KEY_OLD);
+    if (old) {
+      localStorage.setItem(STORAGE_KEY_NEW, old);
+      localStorage.removeItem(STORAGE_KEY_OLD);
+    }
+  } catch {}
+})();
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       hasCompletedOnboarding: false,
       currentUserId: null,
       isPro: false,
@@ -26,23 +38,6 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: STORAGE_KEY_NEW,
-      // migra do storage antigo se existir
-      migrate: async (persistedState: any, _version: number) => {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY_OLD);
-          if (raw && !persistedState) {
-            const old = JSON.parse(raw);
-            // copie só os campos que realmente usamos
-            return {
-              hasCompletedOnboarding:
-                old?.state?.hasCompletedOnboarding ?? false,
-              currentUserId: old?.state?.currentUserId ?? null,
-              isPro: old?.state?.isPro ?? false,
-            };
-          }
-        } catch {}
-        return persistedState;
-      },
       partialize: (state) => ({
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         currentUserId: state.currentUserId,

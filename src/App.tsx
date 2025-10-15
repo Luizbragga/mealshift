@@ -4,8 +4,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { db, seedFoods, initSettings } from "@/data/db";
 import { useAppStore } from "@/store/useAppStore";
+import {
+  db,
+  seedFoods,
+  initSettings,
+  migrateFromReajustaIfNeeded,
+} from "@/data/db";
 
 // Pages
 import Onboarding from "./pages/Onboarding";
@@ -28,6 +33,9 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
+        await migrateFromReajustaIfNeeded();
+        await seedFoods();
+        await initSettings();
         await seedFoods();
         await initSettings();
 
