@@ -85,7 +85,8 @@ export default function Onboarding() {
               <path d="M12 6v12M6 12h12" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Reajusta</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">MealShift</h1>
+
           <p className="text-muted-foreground">
             Adjust the rest of your day in one tap.
           </p>

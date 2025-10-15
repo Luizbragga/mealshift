@@ -30,10 +30,15 @@ export default function App() {
     void initializeApp();
   }, []);
 
-  async function initializeApp() {
-    try {
-      await seedFoods();
-      await initSettings();
+ async function initializeApp() {
+  try {
+    // migra dados do banco antigo, se existir
+    await migrateFromReajustaIfNeeded();
+
+    await seedFoods();
+    await initSettings();
+    ...
+
 
       const user = await db.users.toCollection().first();
       if (user?.id) {

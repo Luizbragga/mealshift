@@ -1,0 +1,12 @@
+{
+  // faz a extensão usar seu tailwind.config.ts
+  "tailwindCSS.experimental.configFile": "tailwind.config.ts",
+
+  // trata .css como PostCSS (habilita @apply, @tailwind, etc.)
+  "files.associations": {
+    "*.css": "postcss"
+  },
+
+  // silencia o linter de CSS para regras desconhecidas
+  "css.lint.unknownAtRules": "ignore"
+}

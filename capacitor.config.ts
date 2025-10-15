@@ -1,16 +1,21 @@
-import { CapacitorConfig } from "@capacitor/cli";
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "app.lovable.643fa8df585c4cf7af576234160720c9",
-  appName: "Reajusta",
+  appId: "app.mealshift",
+  appName: "MealShift",
   webDir: "dist",
-  server: {
-    url: "https://643fa8df-585c-4cf7-af57-6234160720c9.lovableproject.com?forceHideBadge=true",
-    cleartext: true,
-  },
+  // Em produção, normalmente removemos "server".
+  // Mantém só em dev para live reload via Vite.
+  server:
+    process.env.NODE_ENV === "development"
+      ? {
+          url: "http://localhost:5174",
+          cleartext: true,
+        }
+      : undefined,
   plugins: {
     LocalNotifications: {
-      smallIcon: "ic_stat_icon_config_sample",
+      smallIcon: "ic_stat_icon",
       iconColor: "#2ECC71",
     },
   },
