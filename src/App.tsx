@@ -7,8 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { db, seedFoods, initSettings } from "@/data/db";
 import { useAppStore } from "@/store/useAppStore";
 
-// NOTE: page component file names remain as in your project.
-// We'll translate their content when you send them.
+// Pages
 import Onboarding from "./pages/Onboarding";
 import MetaDoDia from "./pages/MetaDoDia";
 import Home from "./pages/Home";
@@ -27,30 +26,23 @@ export default function App() {
   } = useAppStore();
 
   useEffect(() => {
-    void initializeApp();
-  }, []);
+    (async () => {
+      try {
+        await seedFoods();
+        await initSettings();
 
- async function initializeApp() {
-  try {
-    // migra dados do banco antigo, se existir
-    await migrateFromReajustaIfNeeded();
-
-    await seedFoods();
-    await initSettings();
-    ...
-
-
-      const user = await db.users.toCollection().first();
-      if (user?.id) {
-        setHasCompletedOnboarding(true);
-        setCurrentUserId(user.id);
+        const user = await db.users.toCollection().first();
+        if (user?.id) {
+          setHasCompletedOnboarding(true);
+          setCurrentUserId(user.id);
+        }
+      } catch (e) {
+        console.error("Initialization error:", e);
+      } finally {
+        setIsInitialized(true);
       }
-      setIsInitialized(true);
-    } catch (error) {
-      console.error("Initialization error:", error);
-      setIsInitialized(true);
-    }
-  }
+    })();
+  }, [setHasCompletedOnboarding, setCurrentUserId]);
 
   if (!isInitialized) {
     return (
