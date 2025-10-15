@@ -1,3 +1,5 @@
+import type { MealSlot } from "@/data/db";
+
 export type Sex = "M" | "F" | "Other";
 export type Activity = "Sedentary" | "Light" | "Moderate" | "Intense";
 export type Goal = "Lose" | "Maintain" | "Gain";
@@ -67,4 +69,26 @@ export function distributeMeals(
     snackKcal: Math.round(target_kcal * percentages.Snack),
     dinnerKcal: Math.round(target_kcal * percentages.Dinner),
   };
+}
+// Distributes target kcal over the given slots.
+// The last slot gets the remainder so the sum always equals target.
+// This avoids off-by-one rounding issues and feels natural in UI.
+export function distributeBySlots(
+  target_kcal: number,
+  slots: MealSlot[]
+): { byKey: Record<string, number>; total: number } {
+  const byKey: Record<string, number> = {};
+  let acc = 0;
+
+  slots.forEach((s, idx) => {
+    const rounded =
+      idx === slots.length - 1
+        ? target_kcal - acc // last slot closes the sum precisely
+        : Math.round(target_kcal * s.percent);
+
+    byKey[s.key] = Math.max(rounded, 0);
+    acc += byKey[s.key];
+  });
+
+  return { byKey, total: acc };
 }
