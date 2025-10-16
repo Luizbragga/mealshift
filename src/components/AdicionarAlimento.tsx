@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,108 +16,119 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { db, Food } from "@/data/db";
+import { db, type Food, type Meal } from "@/data/db";
 import { hapticSuccess } from "@/lib/haptics";
 import { Search } from "lucide-react";
 
-type meal = "Breakfast" | "Lunch" | "Snack" | "Dinner";
-
+/**
+ * Props
+ * - defaultMeal: I start the modal already focused on the chosen meal.
+ * - onSuccess: caller triggers a reload after successful insert.
+ * - onClose: caller controls the open state (controlled Dialog).
+ */
 interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  defaultmeal: meal;
+  defaultMeal: Meal;
 }
 
+/**
+ * I keep the UI fully in English and persist using the current schema:
+ * Entry.meal ∈ "Breakfast" | "Lunch" | "Snack" | "Dinner"
+ * This stays compatible with Plan fields and history.
+ */
 export function AdicionarAlimento({
   open,
   onClose,
   onSuccess,
-  defaultmeal,
+  defaultMeal,
 }: Props) {
+  // Catalog tab state
   const [foods, setFoods] = useState<Food[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
-  const [qty, setQty] = useState("1");
-  const [meal, setmeal] = useState<meal>(defaultmeal);
+  const [qtyStr, setQtyStr] = useState("1");
 
-  // Free text
-  const [Textname, setTextname] = useState("");
-  const [TextKcal, setTextKcal] = useState("");
+  // Shared state
+  const [meal, setMeal] = useState<Meal>(defaultMeal);
+
+  // Free text tab state
+  const [freeTextName, setFreeTextName] = useState("");
+  const [freeTextKcal, setFreeTextKcal] = useState("");
+
+  // Derived
+  const qty = useMemo(() => {
+    const v = parseFloat(qtyStr);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }, [qtyStr]);
+
+  const filteredFoods = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return foods;
+    return foods.filter((f) => f.name.toLowerCase().includes(q));
+  }, [foods, searchQuery]);
 
   useEffect(() => {
-    if (open) {
-      void loadFoods();
-      setmeal(defaultmeal);
-    }
-  }, [open, defaultmeal]);
+    if (!open) return;
+    // When the dialog opens, refresh catalog and ensure selected meal syncs.
+    setMeal(defaultMeal);
+    void loadFoods();
+  }, [open, defaultMeal]);
 
-  const loadFoods = async () => {
+  async function loadFoods() {
     const allFoods = await db.foods.toArray();
     setFoods(allFoods);
-  };
+  }
 
-  const filteredFoods = foods.filter((f) =>
-    f.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  function resetForm() {
+    setSearchQuery("");
+    setSelectedFood(null);
+    setQtyStr("1");
+    setFreeTextName("");
+    setFreeTextKcal("");
+  }
 
-  const handleAddCatalog = async () => {
-    if (!selectedFood || !qty) return;
+  async function handleAddFromCatalog() {
+    if (!selectedFood || qty <= 0) return;
 
     const today = new Date().toISOString().split("T")[0];
-    const totalKcal = selectedFood.kcalPerPortion * parseFloat(qty);
+    const totalKcal = Math.round(selectedFood.kcalPerPortion * qty);
 
     await db.entries.add({
       dayIso: today,
-      meal,
-      name: `${selectedFood.name} (${qty}x ${selectedFood.basePortion})`,
-      kcal: Math.round(totalKcal),
+      meal, // legacy Meal value (Breakfast/Lunch/Snack/Dinner)
+      name: `${selectedFood.name} (${qty}× ${selectedFood.basePortion})`,
+      kcal: totalKcal,
       origin: "catalog",
-      qty: parseFloat(qty),
+      qty,
     });
 
     await hapticSuccess();
     onSuccess();
-    onClose();
     resetForm();
-  };
+    onClose();
+  }
 
-  const handleAddText = async () => {
-    if (!Textname || !TextKcal) return;
+  async function handleAddFromText() {
+    const kcal = parseInt(freeTextKcal, 10);
+    if (!freeTextName.trim() || !Number.isFinite(kcal) || kcal <= 0) return;
 
     const today = new Date().toISOString().split("T")[0];
 
     await db.entries.add({
       dayIso: today,
       meal,
-      name: Textname,
-      kcal: parseInt(TextKcal),
+      name: freeTextName.trim(),
+      kcal,
       origin: "text",
     });
 
     await hapticSuccess();
     onSuccess();
-    onClose();
     resetForm();
-  };
-
-  const resetForm = () => {
-    setSearchQuery("");
-    setSelectedFood(null);
-    setQty("1");
-    setTextname("");
-    setTextKcal("");
-  };
-
-  const mealLabel = (r: meal) =>
-    ((
-      {
-        Breakfast: "Breakfast",
-        Lunch: "Lunch",
-        Snack: "Snack",
-        Dinner: "Dinner",
-      } as const
-    )[r]);
+    onClose();
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -126,14 +137,14 @@ export function AdicionarAlimento({
           <DialogTitle>Add food</DialogTitle>
         </DialogHeader>
 
+        {/* Meal selector (always visible) */}
         <div className="mb-4">
           <Label>Meal</Label>
-          <Select value={meal} onValueChange={(v: any) => setmeal(v)}>
+          <Select value={meal} onValueChange={(v: Meal) => setMeal(v)}>
             <SelectTrigger>
               <SelectValue placeholder="Select meal" />
             </SelectTrigger>
             <SelectContent>
-              {/* Values remain in PT for DB compatibility; labels in EN */}
               <SelectItem value="Breakfast">Breakfast</SelectItem>
               <SelectItem value="Lunch">Lunch</SelectItem>
               <SelectItem value="Snack">Snack</SelectItem>
@@ -142,17 +153,20 @@ export function AdicionarAlimento({
           </Select>
         </div>
 
-        <Tabs defaultValue="Catalog">
+        {/* Tabs: Catalog vs Free text */}
+        <Tabs defaultValue="catalog">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="Catalog">Catalog</TabsTrigger>
-            <TabsTrigger value="Text">Free text</TabsTrigger>
+            <TabsTrigger value="catalog">Catalog</TabsTrigger>
+            <TabsTrigger value="text">Free text</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="Catalog" className="space-y-4">
+          {/* Catalog tab */}
+          <TabsContent value="catalog" className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search food…"
+                aria-label="Search food"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -160,27 +174,37 @@ export function AdicionarAlimento({
             </div>
 
             <div className="max-h-60 overflow-y-auto space-y-2">
-              {filteredFoods.map((food) => (
-                <button
-                  key={food.id}
-                  onClick={() => setSelectedFood(food)}
-                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                    selectedFood?.id === food.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="font-medium">{food.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {food.basePortion} • {food.kcalPerPortion} kcal
-                  </div>
-                  {selectedFood?.id === food.id && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Selected
+              {filteredFoods.map((food) => {
+                const isActive = selectedFood?.id === food.id;
+                return (
+                  <button
+                    key={food.id}
+                    onClick={() => setSelectedFood(food)}
+                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                      isActive
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    aria-pressed={isActive}
+                    aria-label={`Select ${food.name}`}
+                  >
+                    <div className="font-medium">{food.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {food.basePortion} • {food.kcalPerPortion} kcal
                     </div>
-                  )}
-                </button>
-              ))}
+                    {isActive && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Selected
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+              {filteredFoods.length === 0 && (
+                <p className="text-sm text-muted-foreground px-1">
+                  No results for “{searchQuery}”.
+                </p>
+              )}
             </div>
 
             {selectedFood && (
@@ -191,20 +215,18 @@ export function AdicionarAlimento({
                     type="number"
                     step="0.5"
                     min="0.5"
-                    value={qty}
-                    onChange={(e) => setQty(e.target.value)}
+                    inputMode="decimal"
+                    value={qtyStr}
+                    onChange={(e) => setQtyStr(e.target.value)}
                   />
                   <p className="text-sm text-muted-foreground mt-1">
                     Total:{" "}
-                    {Math.round(
-                      selectedFood.kcalPerPortion * parseFloat(qty || "0")
-                    )}{" "}
-                    kcal
+                    {Math.round(selectedFood.kcalPerPortion * (qty || 0))} kcal
                   </p>
                 </div>
 
                 <Button
-                  onClick={handleAddCatalog}
+                  onClick={handleAddFromCatalog}
                   className="w-full gradient-primary"
                 >
                   Add
@@ -213,13 +235,14 @@ export function AdicionarAlimento({
             )}
           </TabsContent>
 
-          <TabsContent value="Text" className="space-y-4">
+          {/* Free text tab */}
+          <TabsContent value="text" className="space-y-4">
             <div>
               <Label>Description</Label>
               <Input
                 placeholder="e.g., Margherita pizza"
-                value={Textname}
-                onChange={(e) => setTextname(e.target.value)}
+                value={freeTextName}
+                onChange={(e) => setFreeTextName(e.target.value)}
               />
             </div>
 
@@ -227,15 +250,16 @@ export function AdicionarAlimento({
               <Label>Calories</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 placeholder="e.g., 350"
-                value={TextKcal}
-                onChange={(e) => setTextKcal(e.target.value)}
+                value={freeTextKcal}
+                onChange={(e) => setFreeTextKcal(e.target.value)}
               />
             </div>
 
             <Button
-              onClick={handleAddText}
-              disabled={!Textname || !TextKcal}
+              onClick={handleAddFromText}
+              disabled={!freeTextName.trim() || !parseInt(freeTextKcal || "0")}
               className="w-full gradient-primary"
             >
               Add

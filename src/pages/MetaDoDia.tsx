@@ -1,72 +1,113 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { db } from "@/data/db";
+import { db, getMealSlots, saveMealSlots, type MealSlot } from "@/data/db";
 import { distributeBySlots } from "@/lib/tdee";
-import { getMealSlots, type MealSlot } from "@/data/db";
 import { hapticSuccess } from "@/lib/haptics";
 import { ArrowRight } from "lucide-react";
+
+/** Label map for readability in UI */
+const LABEL: Record<MealSlot["key"], string> = {
+  Breakfast: "Breakfast",
+  Lunch: "Lunch",
+  Snack: "Snack",
+  Dinner: "Dinner",
+};
+
+/** Allowed sequences by count (2 → Breakfast+Dinner, 3 → B/L/D, 4 → all) */
+const ORDER: MealSlot["key"][] = ["Breakfast", "Lunch", "Snack", "Dinner"];
 
 export default function MetaDoDia() {
   const navigate = useNavigate();
 
-  // I keep the daily kcal goal and a dynamic list of meal slots (from Settings).
-  const [metaKcal, setMetaKcal] = useState(0);
+  // user target kcal
+  const [targetKcal, setTargetKcal] = useState(0);
+  // meal slots as fractions (0..1)
   const [slots, setSlots] = useState<MealSlot[]>([]);
+  // desired count between 2 and 4
+  const [count, setCount] = useState(4);
 
   useEffect(() => {
-    // I initialize both the user target and the editable slots.
-    void loadUser();
-    void loadSlots();
+    void bootstrap();
   }, []);
 
-  async function loadUser() {
-    // I read the first (and only) user profile saved locally.
+  async function bootstrap() {
+    // load kcal target
     const user = await db.users.toCollection().first();
-    setMetaKcal(user?.kcalTarget ?? 0);
+    setTargetKcal(user?.kcalTarget ?? 0);
+
+    // load slots from settings
+    const initial = await getMealSlots();
+    setSlots(initial);
+    setCount(Math.min(4, Math.max(2, initial.length || 4)));
   }
 
-  async function loadSlots() {
-    // Slots come from Settings; if none exist, I fall back to sensible defaults.
-    const s = await getMealSlots();
-    setSlots(s);
-  }
-
-  // I compute total percentage to enforce a clean 100% split across slots.
-  const totalPercent = Math.round(
-    slots.reduce((acc, s) => acc + (s.percent || 0) * 100, 0)
+  // UI: percentage integers
+  const percents = useMemo(
+    () => slots.map((s) => Math.round(s.percent * 100)),
+    [slots]
   );
-  const isValid = totalPercent === 100;
+  const totalPercent = percents.reduce((a, b) => a + b, 0);
+  const isValid = totalPercent === 100 && targetKcal > 0;
 
-  // This is the generic, slot-based distribution (percent → kcal).
-  const distribution = distributeBySlots(metaKcal, slots);
+  /** Change total count, keeping order and rebalancing evenly */
+  function changeCount(nextCount: number) {
+    const safe = Math.min(4, Math.max(2, nextCount));
+    setCount(safe);
 
-  // I map slot keys to legacy Plan fields (temporary bridge while we migrate schema).
-  const legacyFieldByKey: Record<
-    string,
-    keyof import("@/data/db").Plan | undefined
-  > = {
-    breakfast: "breakfastKcal",
-    lunch: "lunchKcal",
-    snack: "snackKcal",
-    dinner: "dinnerKcal",
-  };
+    const nextKeys = ORDER.slice(0, safe);
+    // keep existing percents when possible
+    const currentMap = new Map(slots.map((s) => [s.key, s.percent]));
+    let nextSlots = nextKeys.map<MealSlot>((k) => ({
+      key: k,
+      percent: currentMap.get(k) ?? 1 / safe,
+    }));
 
+    // normalize to 1
+    const sum = nextSlots.reduce((a, b) => a + b.percent, 0);
+    nextSlots = nextSlots.map((s) => ({ ...s, percent: s.percent / sum }));
+
+    setSlots(nextSlots);
+  }
+
+  /** Update a single slot (percent as integer 0..100 from slider) */
+  function updateSlot(idx: number, percentInt: number) {
+    const next = [...slots];
+    next[idx] = { ...next[idx], percent: percentInt / 100 };
+
+    // normalize total to 1 (keeps last edited value, rescales the others)
+    const sum = next.reduce((a, b) => a + b.percent, 0);
+    if (sum > 0) {
+      const edited = next[idx].percent;
+      const rest = sum - edited;
+      const targetRest = 1 - edited;
+      next.forEach((s, i) => {
+        if (i === idx) return;
+        const ratio = rest > 0 ? s.percent / rest : 1 / (next.length - 1);
+        s.percent = Math.max(0, ratio * targetRest);
+      });
+    }
+    setSlots(next);
+  }
+
+  /** Persist slots and create today's plan */
   async function handleStart() {
+    // persist user preference (slots) for future days
+    await saveMealSlots(slots);
+
+    // compute today's distribution and save plan
     const today = new Date().toISOString().split("T")[0];
+    const dist = distributeBySlots(targetKcal, slots);
 
-    // I build the legacy Plan payload using only the canonical keys we have today.
-    const byKey = distribution.byKey;
-    const planPayload = {
+    await db.plans.add({
       dayIso: today,
-      breakfastKcal: byKey["breakfast"] ?? 0,
-      lunchKcal: byKey["lunch"] ?? 0,
-      snackKcal: byKey["snack"] ?? 0,
-      dinnerKcal: byKey["dinner"] ?? 0,
-    };
+      breakfastKcal: dist.breakfastKcal,
+      lunchKcal: dist.lunchKcal,
+      snackKcal: dist.snackKcal,
+      dinnerKcal: dist.dinnerKcal,
+    });
 
-    await db.plans.add(planPayload);
     await hapticSuccess();
     navigate("/home");
   }
@@ -74,55 +115,66 @@ export default function MetaDoDia() {
   return (
     <div className="min-h-screen bg-background p-6 flex flex-col safe-top pb-24">
       <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground mb-2">
             Your daily goal
           </h1>
-          <div className="text-4xl font-bold text-primary">{metaKcal} kcal</div>
+          <div className="text-4xl font-bold text-primary">
+            {targetKcal} kcal
+          </div>
         </div>
 
-        {/* Dynamic slot sliders */}
+        {/* Meal count selector */}
+        <div className="bg-card rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <span className="font-medium">Number of meals</span>
+            <div className="flex items-center gap-2">
+              {[2, 3, 4].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => changeCount(n)}
+                  className={`h-9 px-3 rounded-md border text-sm ${
+                    count === n
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic sliders */}
         <div className="bg-card rounded-lg p-6 mb-6 space-y-6">
-          {slots.map((slot, idx) => {
-            const currentPct = Math.round((slot.percent || 0) * 100);
-            const kcalForSlot = distribution.byKey[slot.key] ?? 0;
-
-            return (
-              <div key={slot.key}>
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium">{slot.label}</span>
-                  <span className="text-muted-foreground">
-                    {currentPct}% • {kcalForSlot} kcal
-                  </span>
-                </div>
-
-                {/* I let the user tune each slot; I only change the touched slot here.
-                   Auto-balancing will come together with the schema migration step. */}
-                <Slider
-                  value={[currentPct]}
-                  onValueChange={([v]) =>
-                    setSlots((prev) =>
-                      prev.map((s, j) =>
-                        j === idx ? { ...s, percent: v / 100 } : s
-                      )
-                    )
-                  }
-                  max={60}
-                  step={5}
-                />
+          {slots.map((s, i) => (
+            <div key={s.key}>
+              <div className="flex justify-between mb-2">
+                <span className="font-medium">{LABEL[s.key]}</span>
+                <span className="text-muted-foreground">
+                  {Math.round(s.percent * 100)}% •{" "}
+                  {Math.round(targetKcal * s.percent)} kcal
+                </span>
               </div>
-            );
-          })}
+              <Slider
+                value={[Math.round(s.percent * 100)]}
+                onValueChange={([v]) => updateSlot(i, v)}
+                min={0}
+                max={100}
+                step={5}
+              />
+            </div>
+          ))}
 
-          {!isValid && (
+          {totalPercent !== 100 && (
             <div className="text-sm text-destructive">
               Total must be 100% (current: {totalPercent}%)
             </div>
           )}
         </div>
 
-        {/* Simple macro hint (static for now) */}
+        {/* Static macro tip (MVP) */}
         <div className="bg-muted rounded-lg p-4 mb-6">
           <p className="text-sm text-muted-foreground mb-2">
             Suggested macros:
@@ -140,10 +192,9 @@ export default function MetaDoDia() {
           </div>
         </div>
 
-        {/* CTA */}
         <Button
           onClick={handleStart}
-          disabled={!isValid || metaKcal <= 0}
+          disabled={!isValid}
           className="w-full min-touch gradient-primary"
           size="lg"
         >

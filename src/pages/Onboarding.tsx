@@ -46,8 +46,8 @@ export default function Onboarding() {
     const kcalTarget = calculateTDEE({
       sex,
       age,
-      height_cm: heightCm,
-      weight_kg: weightKg,
+      heightCm,
+      weightKg,
       activity,
       goal,
     });

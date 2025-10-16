@@ -14,10 +14,8 @@ export type EntryOrigin = "catalog" | "text";
 // Example: { key: "breakfast", label: "Breakfast", percent: 0.20, order: 1 }
 // key: stable id; label: UI string; percent: share of total kcal; order: sort index
 export interface MealSlot {
-  key: string;
-  label: string;
-  percent: number; // 0..1  (20% => 0.20)
-  order: number; // used to sort ascending in lists
+  key: Meal;
+  percent: number; // 0..1
 }
 
 export interface User {
@@ -60,14 +58,15 @@ export interface Food {
 
 export interface Settings {
   id?: number;
-  breakfastTime?: string; // "08:00"
-  lunchTime?: string; // "12:30"
-  snackTime?: string; // "16:00"
-  dinnerTime?: string; // "19:30"
+  breakfastTime?: string;
+  lunchTime?: string;
+  snackTime?: string;
+  dinnerTime?: string;
   proActive: boolean;
   adjustmentsToday: number;
   consentNotifications: boolean;
-  lastResetDate?: string; // YYYY-MM-DD
+  lastResetDate?: string;
+  /** User-configured meal split. Percent is a fraction (0..1). */
   mealSlots?: MealSlot[];
 }
 
@@ -263,13 +262,11 @@ export async function initSettings(defaults?: Partial<Settings>) {
     adjustmentsToday: 0,
     consentNotifications: false,
     lastResetDate: today,
-
-    // Default meal slots (compatible with current 4-meal UI).
     mealSlots: [
-      { key: "breakfast", label: "Breakfast", percent: 0.2, order: 1 },
-      { key: "lunch", label: "Lunch", percent: 0.35, order: 2 },
-      { key: "snack", label: "Snack", percent: 0.15, order: 3 },
-      { key: "dinner", label: "Dinner", percent: 0.3, order: 4 },
+      { key: "Breakfast", percent: 0.2 },
+      { key: "Lunch", percent: 0.35 },
+      { key: "Snack", percent: 0.15 },
+      { key: "Dinner", percent: 0.3 },
     ],
 
     ...(defaults ?? {}),
@@ -297,25 +294,30 @@ export async function checkAndResetDailyCounter() {
 }
 // Returns meal slots ordered by 'order'. Falls back to 4 standard slots if missing.
 // I keep a safe fallback so legacy users never hit a blank state.
+/** Returns meal slots from settings or a sane default. */
 export async function getMealSlots(): Promise<MealSlot[]> {
   const s = await db.settings.toCollection().first();
-
-  // Fallback if not configured yet
-  const fallback: MealSlot[] = [
-    { key: "breakfast", label: "Breakfast", percent: 0.2, order: 1 },
-    { key: "lunch", label: "Lunch", percent: 0.35, order: 2 },
-    { key: "snack", label: "Snack", percent: 0.15, order: 3 },
-    { key: "dinner", label: "Dinner", percent: 0.3, order: 4 },
+  const slots = s?.mealSlots ?? [
+    { key: "Breakfast", percent: 0.2 },
+    { key: "Lunch", percent: 0.35 },
+    { key: "Snack", percent: 0.15 },
+    { key: "Dinner", percent: 0.3 },
   ];
 
-  if (!s?.mealSlots?.length) return fallback;
-  return [...s.mealSlots].sort((a, b) => a.order - b.order);
+  // Safety: normalize to sum = 1
+  const sum = slots.reduce((a, b) => a + b.percent, 0);
+  if (sum <= 0) return slots;
+  return slots.map((sl) => ({ ...sl, percent: sl.percent / sum }));
 }
 
-// Saves meal slots as-is. UI will be responsible for validating sum=100%.
-// I keep storage dumb and predictable; smart validation stays at the edges (UI/services).
-export async function setMealSlots(slots: MealSlot[]) {
+/** Persists the slots after validating the sum ≈ 1. */
+export async function saveMealSlots(next: MealSlot[]): Promise<void> {
+  // normalize first
+  const sum = next.reduce((a, b) => a + b.percent, 0);
+  const safe =
+    sum > 0 ? next.map((s) => ({ ...s, percent: s.percent / sum })) : next;
+
   const s = await db.settings.toCollection().first();
   if (!s?.id) return;
-  await db.settings.update(s.id, { mealSlots: slots });
+  await db.settings.update(s.id, { mealSlots: safe });
 }

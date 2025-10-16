@@ -1,94 +1,114 @@
-import type { MealSlot } from "@/data/db";
+// src/lib/tdee.ts
+import type { Meal, MealSlot, Sex, Activity, Goal } from "@/data/db";
 
-export type Sex = "M" | "F" | "Other";
-export type Activity = "Sedentary" | "Light" | "Moderate" | "Intense";
-export type Goal = "Lose" | "Maintain" | "Gain";
-
-export interface TDEEParams {
+/** TDEE usando Mifflin-St Jeor + fatores de atividade e objetivo. */
+export function calculateTDEE(params: {
   sex: Sex;
   age: number;
-  height_cm: number;
-  weight_kg: number;
+  heightCm: number;
+  weightKg: number;
   activity: Activity;
   goal: Goal;
-}
+}): number {
+  const { sex, age, heightCm, weightKg, activity, goal } = params;
 
-/** Mifflin–St Jeor Equation */
-export function calculateTDEE(params: TDEEParams): number {
-  const { sex, age, height_cm, weight_kg, activity, goal } = params;
+  // BMR (Mifflin-St Jeor)
+  const base =
+    10 * weightKg +
+    6.25 * heightCm -
+    5 * age +
+    (sex === "M" ? 5 : sex === "F" ? -161 : -78);
 
-  // BMR
-  const bmr =
-    sex === "M"
-      ? 10 * weight_kg + 6.25 * height_cm - 5 * age + 5
-      : 10 * weight_kg + 6.25 * height_cm - 5 * age - 161;
-
-  const activityMultipliers: Record<Activity, number> = {
+  // Fator de atividade
+  const activityFactor: Record<Activity, number> = {
     Sedentary: 1.2,
     Light: 1.375,
     Moderate: 1.55,
     Intense: 1.725,
   };
 
-  const goalAdjustments: Record<Goal, number> = {
-    Lose: 0.85, // -15%
+  // Ajuste de objetivo
+  const goalFactor: Record<Goal, number> = {
+    Lose: 0.85,
     Maintain: 1.0,
-    Gain: 1.1, // +10%
+    Gain: 1.1,
   };
 
-  const tdee = bmr * activityMultipliers[activity];
-  const adjusted = tdee * goalAdjustments[goal];
-  return Math.round(adjusted);
+  const tdee = base * activityFactor[activity] * goalFactor[goal];
+
+  // Arredonda para inteiro
+  return Math.max(0, Math.round(tdee));
 }
 
-export interface MealDistribution {
+/** Safeguard: make sure percents add to ~100% (within a tiny tolerance). */
+function normalizePercents(slots: MealSlot[]): MealSlot[] {
+  const total = slots.reduce((acc, s) => acc + s.percent, 0);
+  if (total === 0) return slots;
+  const needNormalize = Math.abs(total - 1) > 1e-6;
+  if (!needNormalize) return slots;
+  return slots.map((s) => ({ ...s, percent: s.percent / total }));
+}
+
+/** Round and then fix rounding drift so the final sum equals target. */
+function roundWithRemainderFix(
+  target: number,
+  raw: Array<{ key: Meal; value: number }>
+): Record<Meal, number> {
+  const rounded: Record<Meal, number> = {
+    Breakfast: 0,
+    Lunch: 0,
+    Snack: 0,
+    Dinner: 0,
+  };
+  const withRemainders = raw.map(({ key, value }) => {
+    const floor = Math.floor(value);
+    const remainder = value - floor;
+    (rounded as any)[key] = floor;
+    return { key, remainder };
+  });
+
+  const current = Object.values(rounded).reduce((a, b) => a + b, 0);
+  let missing = target - current;
+
+  withRemainders
+    .sort((a, b) => b.remainder - a.remainder)
+    .forEach(({ key }) => {
+      if (missing > 0) {
+        (rounded as any)[key] += 1;
+        missing -= 1;
+      }
+    });
+
+  return rounded;
+}
+
+export function distributeBySlots(
+  targetKcal: number,
+  inputSlots: MealSlot[]
+): {
+  total: number;
+  byMeal: Record<Meal, number>;
   breakfastKcal: number;
   lunchKcal: number;
   snackKcal: number;
   dinnerKcal: number;
-}
+} {
+  const slots = normalizePercents(inputSlots);
 
-/** Keep DB fields (Portuguese) but allow any kcal target */
-export function distributeMeals(
-  target_kcal: number,
-  percentages: {
-    cafe: number;
-    almoco: number;
-    Snack: number;
-    Dinner: number;
-  } = {
-    cafe: 0.2,
-    almoco: 0.35,
-    Snack: 0.15,
-    Dinner: 0.3,
-  }
-): MealDistribution {
+  // Raw proportions in kcals (float)
+  const raw = slots.map((s) => ({
+    key: s.key,
+    value: targetKcal * s.percent,
+  }));
+
+  const byMeal = roundWithRemainderFix(targetKcal, raw);
+
   return {
-    breakfastKcal: Math.round(target_kcal * percentages.cafe),
-    lunchKcal: Math.round(target_kcal * percentages.almoco),
-    snackKcal: Math.round(target_kcal * percentages.Snack),
-    dinnerKcal: Math.round(target_kcal * percentages.Dinner),
+    total: targetKcal,
+    byMeal,
+    breakfastKcal: byMeal.Breakfast,
+    lunchKcal: byMeal.Lunch,
+    snackKcal: byMeal.Snack,
+    dinnerKcal: byMeal.Dinner,
   };
-}
-// Distributes target kcal over the given slots.
-// The last slot gets the remainder so the sum always equals target.
-// This avoids off-by-one rounding issues and feels natural in UI.
-export function distributeBySlots(
-  target_kcal: number,
-  slots: MealSlot[]
-): { byKey: Record<string, number>; total: number } {
-  const byKey: Record<string, number> = {};
-  let acc = 0;
-
-  slots.forEach((s, idx) => {
-    const rounded =
-      idx === slots.length - 1
-        ? target_kcal - acc // last slot closes the sum precisely
-        : Math.round(target_kcal * s.percent);
-
-    byKey[s.key] = Math.max(rounded, 0);
-    acc += byKey[s.key];
-  });
-
-  return { byKey, total: acc };
 }
