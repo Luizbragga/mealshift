@@ -1,6 +1,7 @@
+// src/pages/Home.tsx
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { db, type Plan, type Entry } from "@/data/db";
+import { db, type Plan, type Entry, type Meal } from "@/data/db";
 import { BottomNav } from "@/components/BottomNav";
 import { AdicionarAlimento } from "@/components/AdicionarAlimento";
 import { ComiForaReajuste } from "@/components/ComiForaReajuste";
@@ -8,67 +9,50 @@ import { Plus, AlertCircle } from "lucide-react";
 import { hapticMedium } from "@/lib/haptics";
 import { getMealSlots, type MealSlot } from "@/data/db";
 
-/**
- * I keep using the legacy Meal union for now because Entries and Plan fields
- * still rely on these four well-known buckets. The UI reads "slots" dynamically,
- * but I bridge slot.key → legacy Meal/Plan fields below.
- */
-type Meal = "Breakfast" | "Lunch" | "Snack" | "Dinner";
-
 export default function Home() {
+  // data
   const [plan, setPlan] = useState<Plan | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [slots, setSlots] = useState<MealSlot[]>([]); // dynamic UI source
+
+  // UI state
   const [showAddFood, setShowAddFood] = useState(false);
   const [showAteOut, setShowAteOut] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<Meal>("Breakfast");
 
-  // I keep "today" as ISO once to avoid re-renders during the day.
+  // cache today's ISO once (avoid re-renders during the day)
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  // Bridge maps (slot.key → legacy names)
-  const supportedSlotKeys = ["breakfast", "lunch", "snack", "dinner"] as const;
-  type SupportedKey = (typeof supportedSlotKeys)[number];
-
-  const slotKeyToPlanField: Record<SupportedKey, keyof Plan> = {
-    breakfast: "breakfastKcal",
-    lunch: "lunchKcal",
-    snack: "snackKcal",
-    dinner: "dinnerKcal",
+  /** Map Meal -> corresponding Plan kcal field */
+  const mealToPlanField: Record<Meal, keyof Plan> = {
+    Breakfast: "breakfastKcal",
+    Lunch: "lunchKcal",
+    Snack: "snackKcal",
+    Dinner: "dinnerKcal",
   };
 
-  const slotKeyToMealLabel: Record<SupportedKey, Meal> = {
-    breakfast: "Breakfast",
-    lunch: "Lunch",
-    snack: "Snack",
-    dinner: "Dinner",
-  };
-
+  /** Load plan, entries, and configured slots */
   const loadData = useCallback(async () => {
-    // Load plan for today
     const todayPlan = await db.plans.where("dayIso").equals(todayISO).first();
     setPlan(todayPlan ?? null);
 
-    // Load entries for today
     const todayEntries = await db.entries
       .where("dayIso")
       .equals(todayISO)
       .toArray();
     setEntries(todayEntries);
 
-    // Load configured meal slots from Settings; show only the legacy-supported ones for now
+    // Keep only meals we actually support in Plan for now
     const s = await getMealSlots();
-    const filtered = s.filter((sl) =>
-      supportedSlotKeys.includes(sl.key as SupportedKey)
-    );
-    setSlots(filtered);
+    const supported: Meal[] = ["Breakfast", "Lunch", "Snack", "Dinner"];
+    setSlots(s.filter((sl) => supported.includes(sl.key)));
   }, [todayISO]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
-  /** I compute consumed kcal by "legacy meal label" (bridge for Entry.meal). */
+  /** Sum kcals for a given meal (bridge against Entry.meal) */
   const getConsumedByMeal = useCallback(
     (meal: Meal) =>
       entries
@@ -77,7 +61,7 @@ export default function Home() {
     [entries]
   );
 
-  /** Totals for the header card (goal vs consumed vs remaining). */
+  /** Header totals */
   const { totalGoal, totalConsumed, remaining } = useMemo(() => {
     const goal = plan
       ? plan.breakfastKcal + plan.lunchKcal + plan.snackKcal + plan.dinnerKcal
@@ -102,12 +86,14 @@ export default function Home() {
     setShowAteOut(true);
   };
 
-  /** Empty state (no plan created yet) */
+  /** Empty state when no plan exists yet */
   if (!plan) {
     return (
       <div className="min-h-screen bg-background p-6 flex items-center justify-center safe-top pb-24">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        </div>
+        <div className="text-center">
           <p className="text-muted-foreground">
             No plan for today. Create your goal first.
           </p>
@@ -120,7 +106,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background safe-top pb-24">
       <div className="p-6">
-        {/* Header: summary of the day */}
+        {/* Day summary */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-4">Today</h1>
           <div
@@ -161,26 +147,24 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* Dynamic list of slots (mapped to legacy Plan fields) */}
+        {/* Dynamic meal cards (slot.key → Plan field) */}
         <div className="space-y-3">
           {slots.map((slot) => {
-            const key = slot.key as SupportedKey;
-            const metaKey = slotKeyToPlanField[key];
-            const label = slotKeyToMealLabel[key];
-
-            const meta = plan[metaKey] as number;
-            const consumed = getConsumedByMeal(label);
+            const meal = slot.key as Meal; // keep the union type
+            const planKey = mealToPlanField[meal];
+            const meta = plan[planKey] as number;
+            const consumed = getConsumedByMeal(meal);
             const percentage =
               meta > 0 ? Math.min((consumed / meta) * 100, 100) : 0;
 
             return (
               <button
                 key={slot.key}
-                onClick={() => openAddFood(label)}
+                onClick={() => openAddFood(meal)}
                 className="w-full bg-card rounded-lg p-4 text-left border border-border hover:border-primary transition-colors"
               >
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold">{slot.label}</span>
+                  <span className="font-semibold">{slot.key}</span>
                   <span className="text-sm text-muted-foreground">
                     {consumed} / {meta} kcal
                   </span>
@@ -199,7 +183,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* FAB to add quickly (defaults to Breakfast for now) */}
+      {/* FAB (quick add; defaults to Breakfast for now) */}
       <button
         onClick={() => openAddFood("Breakfast")}
         className="fixed bottom-20 right-6 w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg z-40"
@@ -213,7 +197,7 @@ export default function Home() {
         open={showAddFood}
         onClose={() => setShowAddFood(false)}
         onSuccess={loadData}
-        defaultmeal={selectedMeal}
+        defaultMeal={selectedMeal}
       />
 
       <ComiForaReajuste
@@ -221,7 +205,7 @@ export default function Home() {
         onClose={() => setShowAteOut(false)}
         onSuccess={loadData}
         currentPlan={plan}
-        totalConsumed={entries.reduce((sum, e) => sum + e.kcal, 0)}
+        totalConsumed={totalConsumed}
       />
 
       <BottomNav />
