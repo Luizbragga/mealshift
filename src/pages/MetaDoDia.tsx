@@ -2,30 +2,33 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { db, getMealSlots, saveMealSlots, type MealSlot } from "@/data/db";
+import {
+  db,
+  getMealSlots,
+  saveMealSlots,
+  type MealSlot,
+  type Meal,
+} from "@/data/db";
 import { distributeBySlots } from "@/lib/tdee";
 import { hapticSuccess } from "@/lib/haptics";
 import { ArrowRight } from "lucide-react";
 
-/** Label map for readability in UI */
-const LABEL: Record<MealSlot["key"], string> = {
+/** Labels para UI */
+const LABEL: Record<Meal, string> = {
   Breakfast: "Breakfast",
   Lunch: "Lunch",
   Snack: "Snack",
   Dinner: "Dinner",
 };
 
-/** Allowed sequences by count (2 → Breakfast+Dinner, 3 → B/L/D, 4 → all) */
-const ORDER: MealSlot["key"][] = ["Breakfast", "Lunch", "Snack", "Dinner"];
+/** Ordem base de refeições */
+const ORDER: Meal[] = ["Breakfast", "Lunch", "Snack", "Dinner"];
 
 export default function MetaDoDia() {
   const navigate = useNavigate();
 
-  // user target kcal
   const [targetKcal, setTargetKcal] = useState(0);
-  // meal slots as fractions (0..1)
   const [slots, setSlots] = useState<MealSlot[]>([]);
-  // desired count between 2 and 4
   const [count, setCount] = useState(4);
 
   useEffect(() => {
@@ -33,17 +36,14 @@ export default function MetaDoDia() {
   }, []);
 
   async function bootstrap() {
-    // load kcal target
     const user = await db.users.toCollection().first();
     setTargetKcal(user?.kcalTarget ?? 0);
 
-    // load slots from settings
     const initial = await getMealSlots();
     setSlots(initial);
     setCount(Math.min(4, Math.max(2, initial.length || 4)));
   }
 
-  // UI: percentage integers
   const percents = useMemo(
     () => slots.map((s) => Math.round(s.percent * 100)),
     [slots]
@@ -51,32 +51,27 @@ export default function MetaDoDia() {
   const totalPercent = percents.reduce((a, b) => a + b, 0);
   const isValid = totalPercent === 100 && targetKcal > 0;
 
-  /** Change total count, keeping order and rebalancing evenly */
   function changeCount(nextCount: number) {
     const safe = Math.min(4, Math.max(2, nextCount));
     setCount(safe);
 
     const nextKeys = ORDER.slice(0, safe);
-    // keep existing percents when possible
     const currentMap = new Map(slots.map((s) => [s.key, s.percent]));
     let nextSlots = nextKeys.map<MealSlot>((k) => ({
       key: k,
       percent: currentMap.get(k) ?? 1 / safe,
     }));
 
-    // normalize to 1
     const sum = nextSlots.reduce((a, b) => a + b.percent, 0);
     nextSlots = nextSlots.map((s) => ({ ...s, percent: s.percent / sum }));
 
     setSlots(nextSlots);
   }
 
-  /** Update a single slot (percent as integer 0..100 from slider) */
   function updateSlot(idx: number, percentInt: number) {
     const next = [...slots];
     next[idx] = { ...next[idx], percent: percentInt / 100 };
 
-    // normalize total to 1 (keeps last edited value, rescales the others)
     const sum = next.reduce((a, b) => a + b.percent, 0);
     if (sum > 0) {
       const edited = next[idx].percent;
@@ -91,12 +86,9 @@ export default function MetaDoDia() {
     setSlots(next);
   }
 
-  /** Persist slots and create today's plan */
   async function handleStart() {
-    // persist user preference (slots) for future days
     await saveMealSlots(slots);
 
-    // compute today's distribution and save plan
     const today = new Date().toISOString().split("T")[0];
     const dist = distributeBySlots(targetKcal, slots);
 
@@ -124,7 +116,6 @@ export default function MetaDoDia() {
           </div>
         </div>
 
-        {/* Meal count selector */}
         <div className="bg-card rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between">
             <span className="font-medium">Number of meals</span>
@@ -146,7 +137,6 @@ export default function MetaDoDia() {
           </div>
         </div>
 
-        {/* Dynamic sliders */}
         <div className="bg-card rounded-lg p-6 mb-6 space-y-6">
           {slots.map((s, i) => (
             <div key={s.key}>
@@ -172,24 +162,6 @@ export default function MetaDoDia() {
               Total must be 100% (current: {totalPercent}%)
             </div>
           )}
-        </div>
-
-        {/* Static macro tip (MVP) */}
-        <div className="bg-muted rounded-lg p-4 mb-6">
-          <p className="text-sm text-muted-foreground mb-2">
-            Suggested macros:
-          </p>
-          <div className="flex gap-4 text-sm">
-            <div>
-              <span className="font-medium">Protein:</span> 30%
-            </div>
-            <div>
-              <span className="font-medium">Carbs:</span> 35%
-            </div>
-            <div>
-              <span className="font-medium">Fat:</span> 35%
-            </div>
-          </div>
         </div>
 
         <Button

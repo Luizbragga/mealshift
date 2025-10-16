@@ -20,12 +20,6 @@ import { db, type Food, type Meal } from "@/data/db";
 import { hapticSuccess } from "@/lib/haptics";
 import { Search } from "lucide-react";
 
-/**
- * Props
- * - defaultMeal: I start the modal already focused on the chosen meal.
- * - onSuccess: caller triggers a reload after successful insert.
- * - onClose: caller controls the open state (controlled Dialog).
- */
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -33,31 +27,22 @@ interface Props {
   defaultMeal: Meal;
 }
 
-/**
- * I keep the UI fully in English and persist using the current schema:
- * Entry.meal ∈ "Breakfast" | "Lunch" | "Snack" | "Dinner"
- * This stays compatible with Plan fields and history.
- */
 export function AdicionarAlimento({
   open,
   onClose,
   onSuccess,
   defaultMeal,
 }: Props) {
-  // Catalog tab state
   const [foods, setFoods] = useState<Food[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [qtyStr, setQtyStr] = useState("1");
 
-  // Shared state
   const [meal, setMeal] = useState<Meal>(defaultMeal);
 
-  // Free text tab state
   const [freeTextName, setFreeTextName] = useState("");
   const [freeTextKcal, setFreeTextKcal] = useState("");
 
-  // Derived
   const qty = useMemo(() => {
     const v = parseFloat(qtyStr);
     return Number.isFinite(v) && v > 0 ? v : 0;
@@ -71,7 +56,6 @@ export function AdicionarAlimento({
 
   useEffect(() => {
     if (!open) return;
-    // When the dialog opens, refresh catalog and ensure selected meal syncs.
     setMeal(defaultMeal);
     void loadFoods();
   }, [open, defaultMeal]);
@@ -97,7 +81,7 @@ export function AdicionarAlimento({
 
     await db.entries.add({
       dayIso: today,
-      meal, // legacy Meal value (Breakfast/Lunch/Snack/Dinner)
+      meal,
       name: `${selectedFood.name} (${qty}× ${selectedFood.basePortion})`,
       kcal: totalKcal,
       origin: "catalog",
@@ -137,7 +121,6 @@ export function AdicionarAlimento({
           <DialogTitle>Add food</DialogTitle>
         </DialogHeader>
 
-        {/* Meal selector (always visible) */}
         <div className="mb-4">
           <Label>Meal</Label>
           <Select value={meal} onValueChange={(v: Meal) => setMeal(v)}>
@@ -153,14 +136,12 @@ export function AdicionarAlimento({
           </Select>
         </div>
 
-        {/* Tabs: Catalog vs Free text */}
         <Tabs defaultValue="catalog">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="catalog">Catalog</TabsTrigger>
             <TabsTrigger value="text">Free text</TabsTrigger>
           </TabsList>
 
-          {/* Catalog tab */}
           <TabsContent value="catalog" className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -235,7 +216,6 @@ export function AdicionarAlimento({
             )}
           </TabsContent>
 
-          {/* Free text tab */}
           <TabsContent value="text" className="space-y-4">
             <div>
               <Label>Description</Label>

@@ -1,4 +1,3 @@
-// src/components/ComiForaReajuste.tsx
 import { useMemo, useState } from "react";
 import {
   Dialog,
@@ -12,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { db, type Plan, type Entry, type Meal } from "@/data/db";
 import { hapticSuccess } from "@/lib/haptics";
 
-/** Props for the 'Ate out' / quick adjustment modal */
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -21,10 +19,8 @@ type Props = {
   totalConsumed: number;
 };
 
-/** A tiny catalog to propose quick ideas by remaining kcal bands */
 const SUGGESTIONS: { max: number; items: { name: string; kcal: number }[] }[] =
   [
-    // <=150 kcal
     {
       max: 150,
       items: [
@@ -33,7 +29,6 @@ const SUGGESTIONS: { max: number; items: { name: string; kcal: number }[] }[] =
         { name: "Carrot sticks (150g)", kcal: 60 },
       ],
     },
-    // <=250 kcal
     {
       max: 250,
       items: [
@@ -42,7 +37,6 @@ const SUGGESTIONS: { max: number; items: { name: string; kcal: number }[] }[] =
         { name: "Cottage cheese (150g)", kcal: 190 },
       ],
     },
-    // <=400 kcal
     {
       max: 400,
       items: [
@@ -51,7 +45,6 @@ const SUGGESTIONS: { max: number; items: { name: string; kcal: number }[] }[] =
         { name: "Omelette (2 eggs + veggies)", kcal: 280 },
       ],
     },
-    // >400 kcal
     {
       max: Number.POSITIVE_INFINITY,
       items: [
@@ -62,7 +55,6 @@ const SUGGESTIONS: { max: number; items: { name: string; kcal: number }[] }[] =
     },
   ];
 
-/** Map Plan keys to user-facing labels */
 const MEAL_LABEL: Record<Meal, string> = {
   Breakfast: "Breakfast",
   Lunch: "Lunch",
@@ -77,14 +69,11 @@ export function ComiForaReajuste({
   currentPlan,
   totalConsumed,
 }: Props) {
-  // which meal the user will adjust right now
   const [meal, setMeal] = useState<Meal>("Dinner");
 
-  // let the user log a free-text fallback if suggestions don't fit
   const [freeName, setFreeName] = useState("");
   const [freeKcal, setFreeKcal] = useState("");
 
-  /** Goal (sum of plan) and remaining kcal for the day */
   const { dailyGoal, remaining } = useMemo(() => {
     const g =
       currentPlan.breakfastKcal +
@@ -94,35 +83,24 @@ export function ComiForaReajuste({
     return { dailyGoal: g, remaining: g - totalConsumed };
   }, [currentPlan, totalConsumed]);
 
-  /** Suggest a band according to 'remaining' */
   const suggestedList = useMemo(() => {
     const band = SUGGESTIONS.find((b) => remaining <= b.max) ?? SUGGESTIONS[0];
     return band.items;
   }, [remaining]);
 
-  /** Adds an entry to DB */
   async function addEntry(name: string, kcal: number) {
     const today = new Date().toISOString().split("T")[0];
-
-    const entry: Entry = {
-      dayIso: today,
-      meal,
-      name,
-      kcal,
-      origin: "text",
-    };
+    const entry: Entry = { dayIso: today, meal, name, kcal, origin: "text" };
     await db.entries.add(entry);
     await hapticSuccess();
     onSuccess();
     onClose();
   }
 
-  /** Quick add based on a suggestion */
   function handleQuickPick(k: { name: string; kcal: number }) {
     void addEntry(k.name, k.kcal);
   }
 
-  /** Manual add, free text */
   function handleAddManual() {
     if (!freeName || !freeKcal) return;
     const kcalInt = parseInt(freeKcal, 10);
@@ -138,7 +116,6 @@ export function ComiForaReajuste({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Status box */}
           <div
             className={`rounded-lg p-3 ${
               remaining >= 0 ? "bg-primary/10" : "bg-destructive/10"
@@ -159,7 +136,6 @@ export function ComiForaReajuste({
             </div>
           </div>
 
-          {/* Choose the meal context for this add */}
           <div className="space-y-2">
             <Label>Meal to adjust</Label>
             <div className="grid grid-cols-4 gap-2">
@@ -179,7 +155,6 @@ export function ComiForaReajuste({
             </div>
           </div>
 
-          {/* Suggestions */}
           <div className="space-y-2">
             <Label>Quick options</Label>
             <div className="grid gap-2">
@@ -202,7 +177,6 @@ export function ComiForaReajuste({
             </p>
           </div>
 
-          {/* Manual add */}
           <div className="space-y-2">
             <Label>Or log what you had</Label>
             <Input
